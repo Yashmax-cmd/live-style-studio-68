@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Camera, CameraOff, RefreshCw, Shirt, ShoppingBag } from "lucide-react";
@@ -47,6 +47,48 @@ const clothingItems = [
     price: 159,
     image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=200&q=80",
   },
+  {
+    id: 7,
+    name: "Denim Jacket",
+    category: "Jackets",
+    price: 175,
+    image: "https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=200&q=80",
+  },
+  {
+    id: 8,
+    name: "Black Hoodie",
+    category: "Tops",
+    price: 85,
+    image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=200&q=80",
+  },
+  {
+    id: 9,
+    name: "Silk Blouse",
+    category: "Tops",
+    price: 145,
+    image: "https://images.unsplash.com/photo-1598554747436-c9293d6a588f?w=200&q=80",
+  },
+  {
+    id: 10,
+    name: "Wool Cardigan",
+    category: "Knitwear",
+    price: 165,
+    image: "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=200&q=80",
+  },
+  {
+    id: 11,
+    name: "Evening Gown",
+    category: "Dresses",
+    price: 389,
+    image: "https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=200&q=80",
+  },
+  {
+    id: 12,
+    name: "Polo Shirt",
+    category: "Tops",
+    price: 69,
+    image: "https://images.unsplash.com/photo-1625910513413-5fc40551a299?w=200&q=80",
+  },
 ];
 
 const TryOn = () => {
@@ -57,17 +99,16 @@ const TryOn = () => {
   const streamRef = useRef<MediaStream | null>(null);
   const { toast } = useToast();
 
-  const startCamera = async () => {
+  const startCamera = useCallback(async () => {
     setIsLoading(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
       });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        setIsCameraActive(true);
-      }
+      
+      streamRef.current = stream;
+      setIsCameraActive(true);
+      
       toast({
         title: "Camera activated",
         description: "Select an item from the sidebar to try it on!",
@@ -81,9 +122,17 @@ const TryOn = () => {
       });
     }
     setIsLoading(false);
-  };
+  }, [toast]);
 
-  const stopCamera = () => {
+  // Attach stream to video element when camera becomes active
+  useEffect(() => {
+    if (isCameraActive && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch(console.error);
+    }
+  }, [isCameraActive]);
+
+  const stopCamera = useCallback(() => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
@@ -92,11 +141,13 @@ const TryOn = () => {
       videoRef.current.srcObject = null;
     }
     setIsCameraActive(false);
-  };
+  }, []);
 
   useEffect(() => {
     return () => {
-      stopCamera();
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
     };
   }, []);
 
@@ -121,13 +172,13 @@ const TryOn = () => {
 
       <div className="pt-16 flex min-h-screen">
         {/* Sidebar - Clothing items */}
-        <aside className="w-80 border-r border-border bg-card p-6 overflow-y-auto">
+        <aside className="w-80 border-r border-border bg-card p-6 overflow-y-auto max-h-screen">
           <h2 className="font-display text-lg mb-4">Select an Item</h2>
           <p className="text-sm text-muted-foreground mb-6">
             Choose clothing to try on virtually
           </p>
 
-          <div className="space-y-4">
+          <div className="space-y-4 pb-20">
             {clothingItems.map((item) => (
               <button
                 key={item.id}
@@ -163,7 +214,7 @@ const TryOn = () => {
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-full object-cover mirror"
+                  className="w-full h-full object-cover"
                   style={{ transform: "scaleX(-1)" }}
                 />
                 {/* Overlay for selected item */}
@@ -174,11 +225,11 @@ const TryOn = () => {
                       <p className="text-xs text-muted-foreground">Trying on...</p>
                     </div>
                     {/* Virtual clothing overlay placeholder */}
-                    <div className="absolute inset-0 flex items-center justify-center opacity-30">
+                    <div className="absolute inset-0 flex items-center justify-center opacity-40">
                       <img
                         src={selectedItem.image}
                         alt={selectedItem.name}
-                        className="h-2/3 object-contain mix-blend-overlay"
+                        className="h-1/2 object-contain mix-blend-screen"
                       />
                     </div>
                   </div>
