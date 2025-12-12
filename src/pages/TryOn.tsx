@@ -162,22 +162,46 @@ const TryOn = () => {
   }, []);
 
   const captureFrame = useCallback(() => {
-    if (!videoRef.current || !canvasRef.current) return null;
+    if (!videoRef.current || !canvasRef.current) {
+      console.error("Video or canvas ref not available");
+      return null;
+    }
     
     const video = videoRef.current;
     const canvas = canvasRef.current;
+    
+    // Ensure video is ready
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      console.error("Video dimensions not ready:", video.videoWidth, video.videoHeight);
+      return null;
+    }
+    
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     
     const ctx = canvas.getContext("2d");
-    if (!ctx) return null;
+    if (!ctx) {
+      console.error("Could not get canvas context");
+      return null;
+    }
     
-    // Flip horizontally to match the mirrored view
+    // Draw without flip first for the actual image
+    ctx.save();
     ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
     ctx.drawImage(video, 0, 0);
+    ctx.restore();
     
-    return canvas.toDataURL("image/jpeg", 0.8);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+    
+    // Validate the data URL
+    if (!dataUrl || dataUrl === "data:," || dataUrl.length < 1000) {
+      console.error("Invalid data URL generated:", dataUrl.substring(0, 50));
+      return null;
+    }
+    
+    console.log("Captured frame successfully, length:", dataUrl.length);
+    return dataUrl;
   }, []);
 
   const handleTryOn = useCallback(async () => {
