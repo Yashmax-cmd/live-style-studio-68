@@ -359,12 +359,46 @@ const TryOn = () => {
                       style={{ transform: "scaleX(-1)" }}
                     />
                     {isProcessing && (
-                      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center">
-                        <div className="w-16 h-16 rounded-full bg-gold/20 flex items-center justify-center mb-4 animate-pulse">
-                          <Sparkles className="h-8 w-8 text-gold" />
+                      <div className="absolute inset-0 bg-background/90 backdrop-blur-md flex items-center justify-center p-8">
+                        <div className="w-full max-w-md">
+                          {/* Skeleton preview */}
+                          <div className="relative">
+                            <Skeleton className="w-full aspect-[3/4] rounded-2xl" />
+                            
+                            {/* Animated shimmer overlay */}
+                            <div className="absolute inset-0 rounded-2xl overflow-hidden">
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gold/10 to-transparent animate-[shimmer_2s_infinite] -translate-x-full" 
+                                   style={{ animation: 'shimmer 2s infinite' }} />
+                            </div>
+                            
+                            {/* Center icon */}
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                              <div className="w-20 h-20 rounded-full bg-gold/20 flex items-center justify-center mb-4 animate-pulse">
+                                <Sparkles className="h-10 w-10 text-gold animate-spin" style={{ animationDuration: '3s' }} />
+                              </div>
+                              <p className="text-lg font-medium text-foreground">AI is dressing you up...</p>
+                              <p className="text-sm text-muted-foreground mt-1">This may take a few seconds</p>
+                              
+                              {/* Progress dots */}
+                              <div className="flex gap-2 mt-4">
+                                <div className="w-2 h-2 rounded-full bg-gold animate-bounce" style={{ animationDelay: '0ms' }} />
+                                <div className="w-2 h-2 rounded-full bg-gold animate-bounce" style={{ animationDelay: '150ms' }} />
+                                <div className="w-2 h-2 rounded-full bg-gold animate-bounce" style={{ animationDelay: '300ms' }} />
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Selected item preview */}
+                          {selectedItem && (
+                            <div className="mt-6 flex items-center gap-4 bg-card/50 rounded-lg p-3 border border-border">
+                              <Skeleton className="w-12 h-12 rounded-md" />
+                              <div className="flex-1">
+                                <p className="text-sm font-medium">{selectedItem.name}</p>
+                                <p className="text-xs text-muted-foreground">Processing virtual try-on</p>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        <p className="text-lg font-medium">AI is dressing you up...</p>
-                        <p className="text-sm text-muted-foreground">This may take a few seconds</p>
                       </div>
                     )}
                     {selectedItem && !isProcessing && (
