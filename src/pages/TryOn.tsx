@@ -82,11 +82,42 @@ const TryOn = () => {
         title: "Camera activated",
         description: "Select an item and click 'Try On with AI' to see the magic!",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error accessing camera:", error);
+      
+      let title = "Camera access failed";
+      let description = "Please allow camera access to use virtual try-on.";
+      
+      if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+        title = "Camera permission denied";
+        description = "Please allow camera access in your browser settings and try again.";
+      } else if (error.name === "NotReadableError" || error.name === "TrackStartError") {
+        title = "Camera in use";
+        description = "Your camera may be used by another app. Close other apps using the camera and try again.";
+      } else if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") {
+        title = "No camera found";
+        description = "No camera was detected on your device. Please connect a camera and try again.";
+      } else if (error.name === "OverconstrainedError") {
+        // Try with simpler constraints
+        try {
+          const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          streamRef.current = fallbackStream;
+          setIsCameraActive(true);
+          toast({
+            title: "Camera activated",
+            description: "Select an item and click 'Try On with AI' to see the magic!",
+          });
+          setIsLoading(false);
+          return;
+        } catch {
+          title = "Camera error";
+          description = "Could not access camera with required settings.";
+        }
+      }
+      
       toast({
-        title: "Camera access denied",
-        description: "Please allow camera access to use virtual try-on.",
+        title,
+        description,
         variant: "destructive",
       });
     }
