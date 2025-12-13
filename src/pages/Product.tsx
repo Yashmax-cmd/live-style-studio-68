@@ -8,6 +8,7 @@ import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import { Camera, Minus, Plus, ShoppingBag, CreditCard, ArrowLeft } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import SizeGuide from "@/components/product/SizeGuide";
 
 interface Product {
   id: string;
@@ -145,7 +146,7 @@ const Product = () => {
               </p>
 
               {/* Size Selection */}
-              <div className="mb-6">
+              <div className="mb-4">
                 <p className="text-sm font-medium mb-3">Select Size</p>
                 <div className="flex flex-wrap gap-2">
                   {product.sizes.map((size) => (
@@ -162,6 +163,11 @@ const Product = () => {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Size Guide */}
+              <div className="mb-6">
+                <SizeGuide category={product.category} selectedSize={selectedSize} />
               </div>
 
               {/* Quantity */}
