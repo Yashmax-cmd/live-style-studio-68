@@ -1,12 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Camera, CameraOff, RefreshCw, Shirt, ShoppingBag, Sparkles, X } from "lucide-react";
+import { ArrowLeft, Camera, CameraOff, RefreshCw, Upload, ShoppingBag, Sparkles, X, ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/hooks/useCart";
 import { Skeleton } from "@/components/ui/skeleton";
-
 interface Product {
   id: string;
   name: string;
@@ -29,6 +28,7 @@ const TryOn = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { addToCart } = useCart();
 
@@ -194,24 +194,32 @@ const TryOn = () => {
       return;
     }
 
-    const frame = captureFrame();
-    if (!frame) {
+    // Use uploaded image or capture from camera
+    let imageToProcess = capturedImage;
+    
+    if (!imageToProcess && isCameraActive) {
+      imageToProcess = captureFrame();
+      if (imageToProcess) {
+        setCapturedImage(imageToProcess);
+      }
+    }
+
+    if (!imageToProcess) {
       toast({
-        title: "Capture failed",
-        description: "Could not capture camera frame. Please try again.",
+        title: "No image available",
+        description: "Please upload a photo or enable camera first.",
         variant: "destructive",
       });
       return;
     }
 
-    setCapturedImage(frame);
     setIsProcessing(true);
     setResultImage(null);
 
     try {
       const { data, error } = await supabase.functions.invoke("virtual-try-on", {
         body: {
-          userImage: frame,
+          userImage: imageToProcess,
           clothingDescription: selectedItem.description || selectedItem.name,
           clothingImageUrl: selectedItem.image_url,
         },
@@ -439,6 +447,14 @@ const TryOn = () => {
                       </div>
                     )}
                   </>
+                ) : capturedImage ? (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <img
+                      src={capturedImage}
+                      alt="Uploaded photo"
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  </div>
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center text-center p-8">
                     <div className="w-24 h-24 rounded-full bg-gold/10 flex items-center justify-center mb-6">
@@ -446,28 +462,60 @@ const TryOn = () => {
                     </div>
                     <h3 className="font-display text-2xl mb-2">AI Virtual Try-On</h3>
                     <p className="text-muted-foreground max-w-sm mb-8">
-                      Enable your camera, select an item, and let AI show you wearing it!
+                      Use your camera or upload a photo to try on clothes with AI!
                     </p>
-                    <Button
-                      variant="hero"
-                      size="xl"
-                      onClick={startCamera}
-                      disabled={isLoading}
-                      className="gap-3"
-                    >
-                      {isLoading ? (
-                        <RefreshCw className="h-5 w-5 animate-spin" />
-                      ) : (
-                        <Camera className="h-5 w-5" />
-                      )}
-                      {isLoading ? "Activating..." : "Enable Camera"}
-                    </Button>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <Button
+                        variant="hero"
+                        size="lg"
+                        onClick={startCamera}
+                        disabled={isLoading}
+                        className="gap-3"
+                      >
+                        {isLoading ? (
+                          <RefreshCw className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <Camera className="h-5 w-5" />
+                        )}
+                        {isLoading ? "Activating..." : "Use Camera"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="gap-3"
+                      >
+                        <Upload className="h-5 w-5" />
+                        Upload Photo
+                      </Button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              const dataUrl = event.target?.result as string;
+                              setCapturedImage(dataUrl);
+                              toast({
+                                title: "Photo uploaded",
+                                description: "Select an item and click 'Try On with AI'!",
+                              });
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
 
               <div className="flex items-center gap-4 mt-8">
-                {isCameraActive && (
+                {isCameraActive ? (
                   <>
                     <Button variant="outline" onClick={stopCamera} className="gap-2">
                       <CameraOff className="h-4 w-4" />
@@ -484,14 +532,31 @@ const TryOn = () => {
                       Try On with AI
                     </Button>
                   </>
-                )}
+                ) : capturedImage ? (
+                  <>
+                    <Button variant="outline" onClick={clearResult} className="gap-2">
+                      <X className="h-4 w-4" />
+                      Clear Photo
+                    </Button>
+                    <Button
+                      variant="hero"
+                      size="lg"
+                      onClick={handleTryOn}
+                      disabled={!selectedItem || isProcessing}
+                      className="gap-2"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Try On with AI
+                    </Button>
+                  </>
+                ) : null}
               </div>
             </>
           )}
 
           <div className="mt-8 text-center max-w-lg">
             <p className="text-sm text-muted-foreground">
-              <Shirt className="h-4 w-4 inline-block mr-2" />
+              <ImageIcon className="h-4 w-4 inline-block mr-2" />
               {resultImage 
                 ? "Like what you see? Add it to your cart or try another item!"
                 : "Select an item from the sidebar, then click 'Try On with AI' to see yourself wearing it."
