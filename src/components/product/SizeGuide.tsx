@@ -14,8 +14,16 @@ interface SizeGuideProps {
   selectedSize: string;
 }
 
+interface SizeInfo {
+  chest: string;
+  shoulders: string;
+  length: string;
+  sleeve: string;
+  age?: string;
+}
+
 // Size measurements in cm
-const sizeData = {
+const sizeData: Record<string, Record<string, SizeInfo>> = {
   men: {
     XS: { chest: "86-91", shoulders: "42", length: "66", sleeve: "58" },
     S: { chest: "91-96", shoulders: "44", length: "68", sleeve: "60" },
@@ -58,8 +66,8 @@ const measurementTips = [
 const SizeGuide = ({ category, selectedSize }: SizeGuideProps) => {
   const [isOpen, setIsOpen] = useState(false);
   
-  const categoryData = sizeData[category as keyof typeof sizeData] || sizeData.men;
-  const currentSizeData = categoryData[selectedSize as keyof typeof categoryData];
+  const categoryData = sizeData[category] || sizeData.men;
+  const currentSizeData = categoryData[selectedSize];
   const isKids = category === "boys" || category === "girls";
 
   return (
@@ -130,7 +138,7 @@ const SizeGuide = ({ category, selectedSize }: SizeGuideProps) => {
                               <td className="py-3 px-2 text-muted-foreground">{data.shoulders}</td>
                               <td className="py-3 px-2 text-muted-foreground">{data.length}</td>
                               <td className="py-3 px-2 text-muted-foreground">{data.sleeve}</td>
-                              {isKids && 'age' in data && (
+                              {isKids && data.age && (
                                 <td className="py-3 px-2 text-muted-foreground">{data.age}</td>
                               )}
                             </tr>
@@ -174,7 +182,7 @@ const SizeGuide = ({ category, selectedSize }: SizeGuideProps) => {
             </div>
           </div>
           
-          {isKids && 'age' in currentSizeData && (
+          {isKids && currentSizeData.age && (
             <p className="text-xs text-muted-foreground mt-3 text-center">
               Recommended age: {currentSizeData.age}
             </p>
