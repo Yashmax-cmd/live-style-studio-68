@@ -18,6 +18,7 @@ interface Product {
 const TryOn = () => {
   const [searchParams] = useSearchParams();
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [isVideoReady, setIsVideoReady] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -126,8 +127,23 @@ const TryOn = () => {
 
   useEffect(() => {
     if (isCameraActive && videoRef.current && streamRef.current) {
-      videoRef.current.srcObject = streamRef.current;
-      videoRef.current.play().catch(console.error);
+      const video = videoRef.current;
+      video.srcObject = streamRef.current;
+      
+      // Track when video is actually ready with valid dimensions
+      const handleLoadedMetadata = () => {
+        console.log("Video metadata loaded:", video.videoWidth, video.videoHeight);
+        if (video.videoWidth > 0 && video.videoHeight > 0) {
+          setIsVideoReady(true);
+        }
+      };
+      
+      video.addEventListener('loadedmetadata', handleLoadedMetadata);
+      video.play().catch(console.error);
+      
+      return () => {
+        video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      };
     }
   }, [isCameraActive]);
 
@@ -140,6 +156,7 @@ const TryOn = () => {
       videoRef.current.srcObject = null;
     }
     setIsCameraActive(false);
+    setIsVideoReady(false);
     setCapturedImage(null);
     setResultImage(null);
   }, []);
@@ -198,6 +215,14 @@ const TryOn = () => {
     let imageToProcess = capturedImage;
     
     if (!imageToProcess && isCameraActive) {
+      if (!isVideoReady) {
+        toast({
+          title: "Camera not ready",
+          description: "Please wait for the camera to fully load, then try again.",
+          variant: "destructive",
+        });
+        return;
+      }
       imageToProcess = captureFrame();
       if (imageToProcess) {
         setCapturedImage(imageToProcess);
@@ -207,7 +232,9 @@ const TryOn = () => {
     if (!imageToProcess) {
       toast({
         title: "No image available",
-        description: "Please upload a photo or enable camera first.",
+        description: isCameraActive 
+          ? "Could not capture from camera. Please try again or upload a photo."
+          : "Please upload a photo or enable camera first.",
         variant: "destructive",
       });
       return;
@@ -251,7 +278,7 @@ const TryOn = () => {
     } finally {
       setIsProcessing(false);
     }
-  }, [selectedItem, captureFrame, toast]);
+  }, [selectedItem, capturedImage, isCameraActive, isVideoReady, captureFrame, toast]);
 
   const handleAddToCart = async () => {
     if (selectedItem) {
@@ -525,11 +552,11 @@ const TryOn = () => {
                       variant="hero"
                       size="lg"
                       onClick={handleTryOn}
-                      disabled={!selectedItem || isProcessing}
+                      disabled={!selectedItem || isProcessing || !isVideoReady}
                       className="gap-2"
                     >
                       <Sparkles className="h-4 w-4" />
-                      Try On with AI
+                      {!isVideoReady ? "Camera loading..." : "Try On with AI"}
                     </Button>
                   </>
                 ) : capturedImage ? (
