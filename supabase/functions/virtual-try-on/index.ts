@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { HfInference } from "https://esm.sh/@huggingface/inference@2.3.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,21 +26,32 @@ serve(async (req) => {
     console.log("Processing virtual try-on request with Hugging Face...");
     console.log("Clothing description:", clothingDescription);
 
-    const hf = new HfInference(HF_TOKEN);
-
     // Generate a fashion model image wearing the described clothing
     const prompt = `A professional fashion photography photo of a person wearing ${clothingDescription}. Full body shot, studio lighting, white background, high quality fashion catalog style, realistic and detailed clothing texture.`;
 
     console.log("Generating image with prompt:", prompt);
 
-    const image = await hf.textToImage({
-      inputs: prompt,
-      model: "black-forest-labs/FLUX.1-schnell",
+    // Use the new Hugging Face router endpoint directly
+    const response = await fetch("https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${HF_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        inputs: prompt,
+      }),
     });
 
-    // Convert the blob to a base64 string
-    const arrayBuffer = await image.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Hugging Face API error:", response.status, errorText);
+      throw new Error(`Image generation failed: ${response.status}`);
+    }
+
+    // Get the image as array buffer
+    const imageBuffer = await response.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
     const generatedImage = `data:image/png;base64,${base64}`;
 
     console.log("Image generated successfully");
